@@ -3,43 +3,63 @@ import Head from "next/head";
 import styles from "../styles/Home.module.css";
 
 export default function Home() {
-  const [url, setUrl] = useState("");
+  const [files, setFiles] = useState(new Array(15).fill(""));
+  const [progress, setProgress] = useState(null);
+
   return (
     <div className={styles.container}>
       <Head>
-        <title>Create Next App</title>
+        <title>Fantastic File Zipper</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
-        <input value={url} onChange={(e) => setUrl(e.target.value)} />
+        <h1 className={styles.title}>Fantastic File Zipper!</h1>
+        <ul>
+          {files.map((file, index) => (
+            <li key={index} style={{ display: "flex", width: 500 }}>
+              <input
+                style={{ flex: 1, margin: 4, height: 24 }}
+                value={file}
+                onChange={(e) =>
+                  setFiles(
+                    files.map((f, i) => (index === i ? e.target.value : f))
+                  )
+                }
+              />
+            </li>
+          ))}
+        </ul>
         <button
           onClick={() => {
+            setProgress(0);
             const body = {
               "package-name": "bundle.zip",
               "error-log-name": "errors.txt",
               groups: [
                 {
-                  items: [
-                    {
-                      source: {
-                        url,
-                      },
-                      target: { name: "someFile.png" },
+                  items: files.filter(Boolean).map((url, i) => ({
+                    source: {
+                      url,
                     },
-                  ],
+                    target: { name: `files/${i}.png` },
+                  })),
                 },
               ],
             };
 
-            downloadFile("/download", body);
+            downloadFile("/download", body, (e) => setProgress(e.loaded));
           }}
         >
           Download
         </button>
+        {progress && (
+          <p>
+            {progress > 1048576
+              ? `${Math.round(progress / 1048576)}Mb`
+              : `${Math.round(progress / 1024)}Kb`}
+          </p>
+        )}
       </main>
 
       <footer className={styles.footer}>
@@ -56,18 +76,17 @@ export default function Home() {
   );
 }
 
-function downloadFile(url, body) {
+function downloadFile(url, body, onProgress) {
   const content = JSON.stringify(body);
 
-  console.log("STARTING DOWNLOAD");
   var request = new XMLHttpRequest();
   request.open("POST", url, true);
   request.setRequestHeader("Content-Type", "application/json");
   request.responseType = "blob";
 
+  request.addEventListener("progress", onProgress);
   request.onload = function () {
     // Only handle status code 200
-    console.log("LOADED");
     if (request.status === 200) {
       // Try to find out the filename from the content disposition `filename` value
       var disposition = request.getResponseHeader("content-disposition");
@@ -88,7 +107,7 @@ function downloadFile(url, body) {
       document.body.removeChild(link);
     }
 
-    request.onerror = console.log;
+    request.onerror = console.error;
   };
 
   request.send(content);
