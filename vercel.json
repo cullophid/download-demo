@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "pages/api/test3.js": {
+      "memory": 1024
+    }
+  }
+}
